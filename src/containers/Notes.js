@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useParams, useHistory } from "react-router-dom";
 import { API, Storage } from "aws-amplify";
 import { onError } from "../libs/errorLib";
-import { s3Upload } from "../libs/awsLib";
+import { s3Upload, deleteS3Object } from "../libs/awsLib";
 import { FormGroup, FormControl, ControlLabel } from "react-bootstrap";
 import LoaderButton from "../components/LoaderButton";
 import config from "../config";
@@ -77,6 +77,7 @@ export default function Notes() {
   
     try {
       if (file.current) {
+        await deleteS3Object(note.attachment)
         attachment = await s3Upload(file.current);
       }
   
@@ -91,6 +92,10 @@ export default function Notes() {
     }
   }
   
+  function deleteNote() {
+    return API.del("notes", `notes/${id}`);
+  }
+
   async function handleDelete(event) {
     event.preventDefault();
   
@@ -103,6 +108,15 @@ export default function Notes() {
     }
   
     setIsDeleting(true);
+  
+    try {
+      await deleteNote();
+      await deleteS3Object(note.attachment)
+      history.push("/");
+    } catch (e) {
+      onError(e);
+      setIsDeleting(false);
+    }
   }
   
   return (
